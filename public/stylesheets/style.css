@@ -1,0 +1,343 @@
+body {
+	font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+	background: #fff url('/images/norwegian_rose.png');
+}
+
+a {
+  color: #00B7FF;
+}
+
+.wrapper-inset {
+	width: 806px;
+	height: 664px;
+	margin: auto;
+	padding: 4px;
+	border: 1px solid #bebebe;
+	position: relative;
+	
+	-moz-border-radius: 7px;
+	border-radius: 7px;
+	-webkit-border-radius: 7px;
+	
+	-webkit-box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.6);
+	-moz-box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.6);
+	box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.6);
+	
+	background-color: rgba(255, 255, 255, 0.6);	
+}
+
+.wrapper {
+	width: 800px;
+	height: 660px;
+	
+	margin: auto;
+	position: relative;
+	top: 1px;
+	border: 1px solid #ccc;
+	
+	-moz-border-radius: 5px;
+	border-radius: 5px;
+	-webkit-border-radius: 5px;
+	
+	
+	-webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+	-moz-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+	
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.content-main {
+	width: 540px;
+	float: left;
+	border-right: 1px solid #ccc;
+}
+
+.game-board {
+	height: 480px;
+	border-bottom: 1px solid #ccc;
+	-webkit-box-shadow: 0 1px 0 #fff;
+	-moz-box-shadow: 0 1px 0 #fff;
+	box-shadow: 0 1px 0 #fff;
+	position: relative;
+	padding: 60px 150px;
+}
+
+.game-board svg {
+	padding: 0;
+	margin: 0;
+	position: absolute;
+}
+
+.game-board .row {
+	overflow: hidden;
+}
+
+.game-board .row .col {
+	display: inline-block;
+	width: 60px;
+	height: 60px;
+	text-align: center;
+	position: relative;
+	float: left;
+	cursor: pointer;
+}
+
+.game-board .row .col:hover {
+	background-color: rgba(100, 255, 100, 0.3);
+	border-radius: 30px;
+}
+
+.game-controls {
+	height: 40px;
+	padding: 10px 30px;
+}
+
+.game-controls .btn-wrapper {
+	display: inline-block;
+	
+	padding: 5px;
+
+	border: 1px solid #ddd;
+	
+	-webkit-box-shadow: inset 1px 1px 3px #999;
+	-moz-box-shadow: inset 1px 1px 3px #999;
+	box-shadow: inset 1px 1px 3px #999;
+	
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	-webkit-border-radius: 4px;
+}
+
+.game-controls .feedback-wrapper {
+	display: inline-block;
+	
+	padding: 10px;
+	float: right;
+/*	border: 1px solid #ddd;*/
+	
+	
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	-webkit-border-radius: 4px;
+}
+
+
+.sidebar {
+	float: left;
+	width: 259px;
+}
+
+.sidebar .users-wrapper {
+	color: #333;
+	text-shadow: 0 1px 0 #fff;
+	padding: 7px 10px;
+	
+	border-bottom: 1px solid #ccc;
+	
+	-webkit-box-shadow: 0 1px 0 #fff;
+	-moz-box-shadow: 0 1px 0 #fff;
+	box-shadow: 0 1px 0 #fff;
+}
+
+.sidebar .users-wrapper h2 {
+	text-align: center;
+	border-bottom: 1px solid #ccc;
+	-webkit-box-shadow: 0 1px 0 #fff;
+	-moz-box-shadow: 0 1px 0 #fff;
+	box-shadow: 0 1px 0 #fff;
+	padding-bottom: 7px;
+}
+
+.sidebar .users-wrapper .users-list {
+	padding: 1px 5px;
+	font-size: 13px;
+	overflow: auto;
+	height: 200px;
+}
+
+.sidebar .users-wrapper .users-list .user-item {
+	margin: 5px 0;
+	position: relative;
+}
+
+.sidebar .users-wrapper .users-list .user-item .nickname {
+	line-height: 8px;
+}
+
+.sidebar .users-wrapper .users-list .user-item .status {
+	display: inline-block;
+	position: relative;
+	
+	top: 1px;
+	width: 8px;
+	height: 8px;
+	margin-right: 1px;
+	
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	-webkit-border-radius: 4px;
+	border: 1px solid #ddd;
+	
+	-webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+	-moz-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar .users-wrapper .users-list .user-item .status.ready {
+	background: #b4e391;
+}
+
+.sidebar .users-wrapper .users-list .user-item .status.waiting {
+	background: #ffc578;
+}
+
+
+
+.sidebar .chat-wrapper {
+	color: #333;
+	text-shadow: 0 1px 0 #fff;
+	
+	border-bottom: 1px solid #ccc;
+	-webkit-box-shadow: 0 1px 0 #fff;
+	-moz-box-shadow: 0 1px 0 #fff;
+	box-shadow: 0 1px 0 #fff;
+	padding: 7px 10px;
+}
+
+.sidebar .chat-wrapper h2 {
+	text-align: center;
+	border-bottom: 1px solid #ccc;
+	-webkit-box-shadow: 0 1px 0 #fff;
+	-moz-box-shadow: 0 1px 0 #fff;
+	box-shadow: 0 1px 0 #fff;
+	padding-bottom: 7px;
+}
+
+.sidebar .chat-wrapper .chat-messages {
+	padding-top: 5px;
+	font-size: 13px;
+	overflow: auto;
+	height: 300px;
+}
+
+.sidebar .chat-wrapper .chat-messages .chat-message {
+	padding: 3px 5px;
+}
+
+.sidebar .chat-wrapper .chat-messages .chat-message:nth-child(even) {
+	background-color: #fff;
+}
+
+.sidebar .chat-wrapper .chat-messages .chat-message .nickname {
+	font-weight: bold;
+}
+
+.sidebar .chat-wrapper .chat-messages .chat-message .change-nickname {
+	font-style: italic;
+	color: #999;
+}
+
+
+.sidebar .nickname-chat-input-wrapper input {
+	border: 1px solid #ccc;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	-webkit-border-radius: 4px;
+	padding: 5px 7px;
+	width: 97%;
+	display: block;
+	margin: 3px auto;
+	
+	-webkit-box-shadow: inset 0 1px 1px #999;
+	-moz-box-shadow: inset 0 1px 1px #999;
+	box-shadow: inset 0 1px 1px #999;
+}
+
+
+.chess-piece {
+	display: inline-block;
+	font-size: 30px;
+	font-weight: bold;
+	line-height: 50px;
+	
+	-moz-border-radius: 25px;
+	border-radius: 25px;
+	-webkit-border-radius: 25px;
+	
+/*	border: 1px solid #666;*/
+	width: 50px;
+	height: 50px;
+	text-align: center;
+	
+	
+	background: #fff url('/images/retina_wood.png');
+
+	
+	-webkit-box-shadow: 0 3px 5px rgba(0, 0, 0, 1);
+	-moz-box-shadow: 0 3px 5px rgba(0, 0, 0, 1);
+	box-shadow: 0 3px 5px rgba(0, 0, 0, 1);
+
+	position: relative;
+	top: 4px;
+	
+	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+
+.chess-piece.player:hover {
+	cursor: pointer;
+	
+	-webkit-box-shadow: 0 3px 5px rgba(0, 255, 0, 0.3);
+	-moz-box-shadow: 0 3px 5px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 3px 5px rgba(0, 255, 0, 0.3);
+}
+
+.btn {
+	-moz-border-radius: 3px;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+
+	border: none;
+	color: white;
+	cursor: pointer;
+	display: inline-block;
+	font-size: 14px;
+
+	-moz-box-shadow: inset 0 1px 0 #4a81a3,inset 1px 0 0 #4a81a3,inset -1px 0 0 #4a81a3,inset 0 -1px 0 #4a81a3,inset 0 2px 0 rgba(255, 255, 255, 0.3),inset 0 0 4px rgba(255, 255, 255, 0.3),0 1px 2px rgba(0, 0, 0, 0.3);
+	-webkit-box-shadow: inset 0 1px 0 #4A81A3,inset 1px 0 0 #4A81A3,inset -1px 0 0 #4A81A3,inset 0 -1px 0 #4A81A3,inset 0 2px 0 rgba(255, 255, 255, 0.3),inset 0 0 4px rgba(255, 255, 255, 0.3),0 1px 2px rgba(0, 0, 0, 0.3);
+	box-shadow: inset 0 1px 0 #4A81A3,inset 1px 0 0 #4A81A3,inset -1px 0 0 #4A81A3,inset 0 -1px 0 #4A81A3,inset 0 2px 0 rgba(255, 255, 255, 0.3),inset 0 0 4px rgba(255, 255, 255, 0.3),0 1px 2px rgba(0, 0, 0, 0.3);
+	
+	background-color: #5A95BD;
+	background-repeat: no-repeat;
+	background-image: -moz-linear-gradient(#83B6D1, #5A95BD);
+	background-image: -ms-linear-gradient(top, #83B6D1, #5A95BD);
+	background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#83B6D1), to(#5A95BD));
+	background-image: -webkit-linear-gradient(#83B6D1, #5A95BD);
+	background-image: linear-gradient(top, #83B6D1, #5A95BD);
+
+	padding: 5px 10px;
+	text-align: center;
+	text-decoration: none;
+	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+	
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.btn:hover {
+	background-color: #4E87B1;
+	background-repeat: no-repeat;
+	background-image: -moz-linear-gradient(#71ACC9, #4E87B1);
+	background-image: -ms-linear-gradient(top, #71ACC9, #4E87B1);
+	background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#71ACC9), to(#4E87B1));
+	background-image: -webkit-linear-gradient(#71ACC9, #4E87B1);
+	background-image: linear-gradient(top, #71ACC9, #4E87B1);
+}
+
+.btn:active {
+	-moz-box-shadow: inset 0 1px 0 rgba(10, 10, 10, 0.5),inset 1px 0 0 rgba(10, 10, 10, 0.3),inset -1px 0 0 rgba(10, 10, 10, 0.4),inset 0 -1px 0 rgba(10, 10, 10, 0.5),inset 0 1px 5px rgba(0, 0, 0, 0.3),0 1px 0 rgba(255, 255, 255, 0.3);
+	-webkit-box-shadow: inset 0 1px 0 rgba(10, 10, 10, 0.5),inset 1px 0 0 rgba(10, 10, 10, 0.3),inset -1px 0 0 rgba(10, 10, 10, 0.4),inset 0 -1px 0 rgba(10, 10, 10, 0.5),inset 0 1px 5px rgba(0, 0, 0, 0.3),0 1px 0 rgba(255, 255, 255, 0.3);
+	box-shadow: inset 0 1px 0 rgba(10, 10, 10, 0.5),inset 1px 0 0 rgba(10, 10, 10, 0.3),inset -1px 0 0 rgba(10, 10, 10, 0.4),inset 0 -1px 0 rgba(10, 10, 10, 0.5),inset 0 1px 5px rgba(0, 0, 0, 0.3),0 1px 0 rgba(255, 255, 255, 0.3);
+}
+

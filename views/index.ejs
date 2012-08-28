@@ -1,0 +1,286 @@
+<html>
+
+<head>
+	<title>象棋</title>
+	<link rel='stylesheet' href='../stylesheets/reset.css' />
+	<link rel='stylesheet' href='../stylesheets/style.css' />
+	
+
+	<script src="/javascripts/jquery.min.js" type=""></script>
+	<script src="/javascripts/d3.v2.min.js" type=""></script>
+	
+	<script src="/socket.io/socket.io.js"></script>
+	
+	<script type="text/javascript">
+		var socket 		= io.connect('http://localhost'),
+			NUM_ROWS 	= 8,
+			NUM_COLS	= 4,
+			chessPieces = {				
+				'redGeneral': {	name: 'general', color: 'red', character: '帥' },
+				'redAdvisor1': { name: 'advisor', color: 'red', character: '仕' },
+				'redAdvisor2': { name: 'advisor', color: 'red', character: '仕' },
+				'redElephant1': { name: 'elephant', color: 'red', character: '相' },
+				'redElephant2': { name: 'elephant', color: 'red', character: '相' },
+				'redHorse1': { name: 'horse', color: 'red', character: '傌' },
+				'redHorse2': { name: 'horse', color: 'red', character: '傌' },
+				'redChariot1': { name: 'chariot', color: 'red', character: '俥' },
+				'redChariot2': { name: 'chariot', color: 'red', character: '俥' },
+				'redCannon1': { name: 'cannon', color: 'red', character: '炮' },
+				'redCannon2': { name: 'cannon', color: 'red', character: '炮' },
+				'redSoldier1': { name: 'soldier', color: 'red', character: '兵' },
+				'redSoldier2': { name: 'soldier', color: 'red', character: '兵' },
+				'redSoldier3': { name: 'soldier', color: 'red', character: '兵' },
+				'redSoldier4': { name: 'soldier', color: 'red', character: '兵' },
+				'redSoldier5': { name: 'soldier', color: 'red', character: '兵' },
+				'blackGeneral': { name: 'general', color: 'black', character: '將' },
+				'blackAdvisor1': { name: 'advisor', color: 'black', character: '士' },
+				'blackAdvisor2': { name: 'advisor', color: 'black', character: '士' },
+				'blackElephant1': { name: 'elephant', color: 'black', character: '象' },
+				'blackElephant2': { name: 'elephant', color: 'black', character: '象' },
+				'blackHorse1': { name: 'horse', color: 'black', character: '馬' },
+				'blackHorse2': { name: 'horse', color: 'black', character: '馬' },
+				'blackChariot1': { name: 'chariot', color: 'black', character: '車' },
+				'blackChariot2': { name: 'chariot', color: 'black', character: '車' },
+				'blackCannon1': { name: 'cannon', color: 'black', character: '砲' },
+				'blackCannon2': { name: 'cannon', color: 'black', character: '砲' },
+				'blackSoldier1': { name: 'soldier', color: 'black', character: '卒' },
+				'blackSoldier2': { name: 'soldier', color: 'black', character: '卒' },
+				'blackSoldier3': { name: 'soldier', color: 'black', character: '卒' },
+				'blackSoldier4': { name: 'soldier', color: 'black', character: '卒' },
+				'blackSoldier5': { name: 'soldier', color: 'black', character: '卒' }
+			},
+			initLocBuffer = -1;
+	
+		socket.on('submit-chat-callback', function(chatData) {
+			var socketId 	= chatData['socketId'],
+				message		= chatData['message'],
+				nickname	= chatData['nickname'],
+				color		= chatData['color'],
+				messageType	= chatData['messageType'],
+				chatHtml;
+			
+			switch (messageType) {
+				case 'chat':
+					chatHtml	= '<li class="chat-message"><span class="nickname" style="color: '+color+';">'+nickname+'</span>: <span class="message '+messageType+'">'+message+'</span></li>';
+					break;
+				case 'change-nickname':
+					chatHtml	= '<li class="chat-message"><span class="message '+messageType+'">'+message+'</span></li>';
+					break;
+			}
+			$('.chat-wrapper .chat-messages').append(chatHtml).animate({ scrollTop: $('.chat-wrapper .chat-messages').prop('scrollHeight') }, 1);
+		});
+		
+		socket.on('update-users-list', function(socketsHash) {
+			var socketData,
+				usersListHtml = '';
+				
+			for (var socketId in socketsHash) {
+				socketData = socketsHash[socketId];
+				usersListHtml += generateUserItemHtml(socketId, socketData);
+			}
+			$('.users-wrapper .users-list').empty().append(usersListHtml);
+		});
+		
+		
+		socket.on('display-game-feedback', function(feedbackHash) {
+			var feedbackMessage = feedbackHash['message'];
+			$('.feedback-wrapper .feedback').text(feedbackMessage);
+		});
+		
+		socket.on('update-board', function(gameBoard, perspective) {
+			
+		});
+		
+		socket.on('submit-player-ready-callback', function() {
+			$('.game-controls .feedback').text('Waiting for more players...');
+		});
+		
+		socket.on('hide-btn-ready', function() {
+			$('.btn-ready').closest('.btn-wrapper').hide();
+		});
+		
+		socket.on('display-board', function(gameBoard) {
+			if (!gameBoard) {
+				return;
+			}
+			
+			var $gameBoard = $('.content-main .game-board'),
+				$row,
+				$col,
+				$svg = $gameBoard.find('svg'),
+				chessPieceName,
+				chessPieceInfo,
+				chessPieceColor,
+				$chessPiece,
+				status;
+			
+			$svg.detach()
+			
+			$gameBoard.empty().append($svg);
+				
+			for (var row = 0; row < NUM_ROWS; row++) {
+				$row = $('<div class="row"></div>');
+				for (var col = 0; col < NUM_COLS; col++) {
+					chessPieceInfo = gameBoard[row][col];
+					chessPieceInfoStatus = chessPieceInfo['status'];
+					console.log(chessPieceInfo);
+					$col = $('<div class="col" data-cell-id="'+row+','+col+'"></div>');
+					if (chessPieceInfoStatus != 'empty') {
+						// there is a piece here
+						if (chessPieceInfoStatus == 'hidden') {
+							$chessPiece = $('<div class="chess-piece '+chessPieceInfo['color']+'"></div>');
+						} else {
+							chessPieceName = chessPieces[chessPieceInfo['id']]['character'];
+							chessPieceColor = chessPieceInfo['color'];
+							
+							$chessPiece = $('<div class="chess-piece" style="color: '+chessPieceColor+';">'+chessPieceName+'</div>');
+						}
+						$col.append($chessPiece);
+					}
+					$row.append($col);
+				}
+				$gameBoard.append($row);
+			}
+			
+		});
+		
+		function generateUserItemHtml(socketId, socketData) {
+			var nickname 	= socketData['nickname'],
+				color		= socketData['color'],
+				status		= socketData['status'],
+				html 		= '<li class="user-item" data-socket-id="'+socketId+'"><span class="status '+status+'"></span> <span class="nickname" style="color: '+color+';">'+nickname+'</span></li>';
+			return html;
+		}
+		
+		function drawBoardBackground() {
+			var chart 	= d3.select('.game-board').append('svg')
+				.attr('width', 242)
+				.attr('height', 482);
+				
+			// make horizontal lines
+			for (var i = 0; i < 9; i++) {
+				chart.append('line')
+					.attr('x1', 1)
+					.attr('x2', 241)
+					.attr('y1', 1+i*60)
+					.attr('y2', 1+i*60)
+					.style('stroke', '#000')
+					.style('stroke-width', 1);
+			}			
+			
+			// make vertical lines
+			for (var i = 0; i < 5; i++) {
+				chart.append('line')
+					.attr('y1', 1)
+					.attr('y2', 481)
+					.attr('x1', 1+i*60)
+					.attr('x2', 1+i*60)
+					.style('stroke', '#000')
+					.style('stroke-width', 1);
+			}
+		}
+		
+		$().ready(function() {
+			$('.nickname-input').live('keypress', function(e) {
+				var nickname;
+				if (e.keyCode == 13) {
+					nickname = $(this).val();
+				    socket.emit('set-nickname', nickname);
+					$(this).attr('placeholder', nickname);
+					$(this).val('');
+				}
+			});
+			
+			$('.chat-input').live('keypress', function(e) {
+				var message;
+				if (e.keyCode == 13) {
+					message = $(this).val();
+				    socket.emit('submit-chat', message, 'chat');
+					$(this).val('');
+				}
+			});
+			
+			$('.btn-ready').live('click', function(e) {
+				var isReady = $(this).attr('data-ready');
+				if (isReady != 'ready') {
+					$(this).attr('data-ready', 'ready');
+					$(this).text('Readied...');
+					socket.emit('submit-player-ready');
+				}
+				e.preventDefault();
+			});
+			
+			$('.chess-piece').live('click', function(e) {
+				var $col 		= $(this).closest('.col'),
+					cellInfo 	= $col.attr('data-cell-id'),
+					cellRow		= cellInfo.split(',')[0],
+					cellCol		= cellInfo.split(',')[1],
+					status		= ($(this).text() == '' ? 'hidden' : 'active');
+				if (status == 'hidden') {
+					socket.emit('show-piece', { row: cellRow, col: cellCol });	
+					initLocBuffer = -1;
+				} else {
+					// attempting to move from loc 1 to loc 2
+					if (initLocBuffer == -1) {
+						initLocBuffer = { row: cellRow, col: cellCol };
+						console.log(initLocBuffer);
+					} else {
+						finalLoc = { row: cellRow, col: cellCol };
+						socket.emit('move-piece', { initLocHash: initLocBuffer, finalLocHash: finalLoc });
+						initLocBuffer = -1;
+					}
+				}
+			});
+			
+			drawBoardBackground();
+		});
+		
+		
+	</script>
+</head>
+
+<body>
+	<div class="wrapper-inset">
+	<div class="wrapper">
+		<div class="content-main">
+			<div class="game-board">
+				
+				
+			</div>
+		
+			<div class="game-controls">
+				<div class="btn-wrapper">
+					<a href="#" class="btn btn-ready">Ready Up</a>
+				</div>
+				<div class="feedback-wrapper">
+					<span class="feedback">Ready up to play...</span>
+				</div>
+			</div>
+		</div>
+		
+		<div class="sidebar">
+			<div class="users-wrapper">
+				<h2>ching chong ling long</h2>
+				<ul class="users-list">
+				</ul>
+			</div>
+				
+			<div class="chat-wrapper">
+				<h2>ting tong</h2>
+				<ul class="chat-messages">
+
+				</ul>
+			</div>
+			
+			<div class="nickname-chat-input-wrapper">
+				<input type="text" class="chat-input" placeholder="enter a message"></input>
+				<input type="text" class="nickname-input" placeholder="set your nickname"></input>
+			</div>
+		</div>
+	</div>
+	
+	</div>
+	
+</body>
+
+</html>
