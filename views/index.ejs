@@ -15,6 +15,7 @@
 		var socket 		= io.connect('http://localhost'),
 			NUM_ROWS 	= 8,
 			NUM_COLS	= 4,
+			TEAM_ENUM	= -1,
 			chessPieces = {				
 				'redGeneral': {	name: 'general', color: 'red', character: '帥' },
 				'redAdvisor1': { name: 'advisor', color: 'red', character: '仕' },
@@ -99,6 +100,10 @@
 			$('.btn-ready').closest('.btn-wrapper').hide();
 		});
 		
+		socket.on('set-team-enum', function(teamEnum) {
+			TEAM_ENUM = teamEnum;
+		});
+		
 		socket.on('display-board', function(gameBoard) {
 			if (!gameBoard) {
 				return;
@@ -111,6 +116,8 @@
 				chessPieceName,
 				chessPieceInfo,
 				chessPieceColor,
+				chessPieceTeamEnum,
+				chessPieceTeamType,
 				$chessPiece,
 				status;
 			
@@ -128,12 +135,17 @@
 					if (chessPieceInfoStatus != 'empty') {
 						// there is a piece here
 						if (chessPieceInfoStatus == 'hidden') {
-							$chessPiece = $('<div class="chess-piece '+chessPieceInfo['color']+'"></div>');
+							$chessPiece = $('<div class="chess-piece"></div>');
 						} else {
 							chessPieceName = chessPieces[chessPieceInfo['id']]['character'];
 							chessPieceColor = chessPieceInfo['color'];
-							
-							$chessPiece = $('<div class="chess-piece" style="color: '+chessPieceColor+';">'+chessPieceName+'</div>');
+							chessPieceTeamEnum = chessPieceInfo['teamEnum'];
+							if (chessPieceTeamEnum == TEAM_ENUM) {
+								chessPieceTeamType = 'player';
+							} else {
+								chessPieceTeamType = 'opponent';
+							}
+							$chessPiece = $('<div class="chess-piece '+chessPieceTeamType+'" style="color: '+chessPieceColor+';">'+chessPieceName+'</div>');
 						}
 						$col.append($chessPiece);
 					}
@@ -210,26 +222,64 @@
 				e.preventDefault();
 			});
 			
-			$('.chess-piece').live('click', function(e) {
-				var $col 		= $(this).closest('.col'),
-					cellInfo 	= $col.attr('data-cell-id'),
+			$('.btn-draw').live('click', function(e) {
+				var isDrawn = $(this).attr('data-drawn');
+				if (isDrawn != 'drawn') {
+					$(this).attr('data-drawn', 'drawn');
+					$(this).text('Draw Declared...');
+					socket.emit('submit-draw');
+				}
+				e.preventDefault();
+			});
+			
+			$('.col').live('click', function(e) {
+				var cellInfo 	= $(this).attr('data-cell-id'),
 					cellRow		= cellInfo.split(',')[0],
 					cellCol		= cellInfo.split(',')[1],
-					status		= ($(this).text() == '' ? 'hidden' : 'active');
-				if (status == 'hidden') {
-					socket.emit('show-piece', { row: cellRow, col: cellCol });	
-					initLocBuffer = -1;
-				} else {
-					// attempting to move from loc 1 to loc 2
-					if (initLocBuffer == -1) {
-						initLocBuffer = { row: cellRow, col: cellCol };
-						console.log(initLocBuffer);
+					$chessPiece	= $(this).find('.chess-piece'),
+					$oldChessPiece,
+					oldCellRow,
+					oldCellCol,
+					status;
+				if ($chessPiece.length > 0) {
+					status = ($chessPiece.text() == '' ? 'hidden' : 'active');
+					if (status == 'hidden') {
+						socket.emit('show-piece', { row: cellRow, col: cellCol });	
+						$chessPiece.removeClass('selected');
+						initLocBuffer = -1;
 					} else {
+						// attempting to move from loc 1 to loc 2
+						if (initLocBuffer == -1) {
+							initLocBuffer = { row: cellRow, col: cellCol };
+							$chessPiece.addClass('selected');
+						} else {
+							// get final location, emit to server
+							finalLoc = { row: cellRow, col: cellCol };
+							socket.emit('move-piece', { initLocHash: initLocBuffer, finalLocHash: finalLoc });
+							// remove old chess piece selection
+							oldCellRow = initLocBuffer['row'];
+							oldCellCol = initLocBuffer['col'];
+							$oldChessPiece = $('.col[data-cell-id="'+oldCellRow+','+oldCellCol+'"]').find('.chess-piece');
+							$oldChessPiece.removeClass('selected');
+							// reset initLocBuffer
+							initLocBuffer = -1;
+						}
+					}
+				} else {
+					if (initLocBuffer != -1) {
+						// moving selected piece to empty space
 						finalLoc = { row: cellRow, col: cellCol };
 						socket.emit('move-piece', { initLocHash: initLocBuffer, finalLocHash: finalLoc });
+						// remove old chess piece selection
+						oldCellRow = initLocBuffer['row'];
+						oldCellCol = initLocBuffer['col'];
+						$oldChessPiece = $('.col[data-cell-id="'+oldCellRow+','+oldCellCol+'"]').find('.chess-piece');
+						$oldChessPiece.removeClass('selected');
+						// reset initLocBuffer
 						initLocBuffer = -1;
 					}
 				}
+				
 			});
 			
 			drawBoardBackground();
@@ -251,6 +301,7 @@
 			<div class="game-controls">
 				<div class="btn-wrapper">
 					<a href="#" class="btn btn-ready">Ready Up</a>
+					<a href="#" class="btn btn-draw">Declare Draw</a>
 				</div>
 				<div class="feedback-wrapper">
 					<span class="feedback">Ready up to play...</span>

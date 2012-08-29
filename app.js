@@ -47,7 +47,8 @@ var socketsHash	= {},
 		'waitingPlayers': [],
 		'status': 'waiting',
 		'currentPlayers': [],
-		'currentTurnCounter': 1
+		'currentTurnCounter': 1,
+		'drawRequesters': []
 	},
 	NUM_SHUFFLES = 10,
 	NUM_ROWS = 8,
@@ -157,6 +158,29 @@ io.sockets.on('connection', function (socket) {
 
 	});
 	
+	socket.on('submit-draw', function () {
+		var	gameStatus = gameState['status'],
+			drawRequesters = gameState['drawRequesters'],
+			socketId = socket['id'],
+			message;
+
+		if (gameStatus == 'playing') {
+			if (drawRequesters.indexOf(socketId) == -1) {
+				drawRequesters.push(socketId);
+				if (drawRequesters.length == 2) {
+					// game declared a draw, end
+					endGame();
+				}
+			} else {
+				message = 'You already declared a draw.';
+				broadcastGameFeedback(message, socket);				
+			}
+		} else {
+			message = 'You cannot declare a draw now.';
+			broadcastGameFeedback(message, socket);
+		}
+	});
+	
 	socket.on('submit-chat', function (message, messageType) {
 		submitChat(socket, message, messageType);
 	});
@@ -175,16 +199,19 @@ io.sockets.on('connection', function (socket) {
 		var gameStatus = gameState['status'];
 		delete socketsHash[socket['id']];
 		if (gameStatus == 'playing') {
-			console.log('current players are ');
-			console.log(gameState['currentPlayers']);
-			// end the game, reset gameStatus
-			gameStatus = 'waiting';
+			endGame();
 		} else {
 			// was not playing
 		}
 		updateUsersList();
 	});
 });
+
+function endGame() {
+	var gameStaus;
+	
+	gameStatus = 'waiting';
+}
 
 function isTurn(socket) {
 	var socketId 				= socket['id'],
@@ -197,27 +224,25 @@ function isTurn(socket) {
 }
 
 function showPiece(socket, locHash) {
+	var row = locHash['row'],
+		col = locHash['col'],
+		message,
+		socketData,
+		socketId = socket['id'],
+		currentPlayerTeamEnum,
+		chessPiece;
+		
 	if (isTurn(socket)) {
-		var row = locHash['row'],
-			col = locHash['col'],
-			message,
-			socketData,
-			socketId = socket['id'],
-			currentPlayerTeamEnum,
-			chessPiece;
-
 		if (gameBoard[row][col]['status'] && gameBoard[row][col]['status'] === 'hidden') {
 			gameBoard[row][col]['status'] = 'active';
-			
 			socketData = socketsHash[socketId];
+			
 			if (socketData['teamEnum'] === undefined) {
 				// set this socket's teamEnum
 				currentPlayerTeamEnum = gameBoard[row][col]['teamEnum'];
 				socketData['teamEnum'] = currentPlayerTeamEnum;
 				socket.set('teamEnum', currentPlayerTeamEnum);
-				
-				console.log('socketData[teamenum] = ' + socketData['teamEnum']);
-				
+				socket.emit('set-team-enum', socketData['teamEnum']);
 				
 				// set other socket's teamEnum
 				otherPlayerTeamEnum = (currentPlayerTeamEnum == 0 ? 1 : 0);
@@ -228,7 +253,7 @@ function showPiece(socket, locHash) {
 					otherSocket				= getClientById(otherSocketId);
 				socketsHash[otherSocketId]['teamEnum'] = otherPlayerTeamEnum;
 				otherSocket.set('teamEnum', otherPlayerTeamEnum);
-				console.log('socketData[teamEnum] = ' + otherPlayerTeamEnum);
+				otherSocket.emit('set-team-enum', otherPlayerTeamEnum);
 				
 				// set all colors of the chessPieces for this socket's enum
 				for (var chessPieceName in chessPieces) {
@@ -350,6 +375,7 @@ function checkRules(socket, initLocHash, finalLocHash) {
 		if (moveDist == 1) {
 			// everyone except cannons can capture by moving 1 space
 			if (initPieceRank == 6) {
+				console.log('movedist is 1');
 				// we have a cannon. it must capture by moving more than one piece
 				message = "Cannons must jump over only one piece to capture opponent.";
 				broadcastGameFeedback(message, socket);
@@ -376,6 +402,7 @@ function checkRules(socket, initLocHash, finalLocHash) {
 				}
 			}
 		} else if (initPieceRank == 6) {
+			console.log('clicked piece = rank 6');
 			// allow cannons to jump over piece to kill
 			if (finalRow - initRow != 0) {
 				// row jumping
@@ -384,7 +411,8 @@ function checkRules(socket, initLocHash, finalLocHash) {
 						piecesJumpedOver.push(gameBoard[row][finalCol]);	
 					}
 				}
-				if (piecesJumpedOver == 3) {
+				console.log(piecesJumpedOver);
+				if (piecesJumpedOver.length == 3) {
 					// success
 					return true;
 				} else {
@@ -399,7 +427,7 @@ function checkRules(socket, initLocHash, finalLocHash) {
 						piecesJumpedOver.push(gameBoard[finalRow][col]);	
 					}
 				}
-				if (piecesJumpedOver == 3) {
+				if (piecesJumpedOver.length == 3) {
 					// success
 					return true;
 				} else {
