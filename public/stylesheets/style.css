@@ -305,6 +305,10 @@ a {
 	box-shadow: 0 3px 5px rgba(220, 180, 0, 0.3);
 }
 
+.chess-piece.active {
+	background: #000 url('/images/egg_shell.png');
+}
+
 .btn {
 	-moz-border-radius: 3px;
 	-webkit-border-radius: 3px;

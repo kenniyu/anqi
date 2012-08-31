@@ -82,7 +82,6 @@
 			$('.users-wrapper .users-list').empty().append(usersListHtml);
 		});
 		
-		
 		socket.on('display-game-feedback', function(feedbackHash) {
 			var feedbackMessage = feedbackHash['message'];
 			$('.feedback-wrapper .feedback').text(feedbackMessage);
@@ -96,12 +95,35 @@
 			$('.game-controls .feedback').text('Waiting for more players...');
 		});
 		
+		socket.on('set-team-enum', function(teamEnum) {
+			TEAM_ENUM = teamEnum;
+		});
+		
+		socket.on('show-btn-ready', function() {
+			$('.btn-ready').css('display', 'block').removeAttr('data-ready');
+			$('.btn-ready').closest('.btn-wrapper').show();
+			$('.btn-ready').text('Ready Up');
+		});
+		
+		socket.on('show-btn-draw', function() {
+			$('.btn-draw').css('display', 'block').removeAttr('data-drawn');
+			$('.btn-draw').closest('.btn-wrapper').show();
+			$('.btn-draw').text('Declare Draw');
+		});
+		
 		socket.on('hide-btn-ready', function() {
+			$('.btn-ready').hide();
 			$('.btn-ready').closest('.btn-wrapper').hide();
 		});
 		
-		socket.on('set-team-enum', function(teamEnum) {
-			TEAM_ENUM = teamEnum;
+		socket.on('hide-btn-draw', function() {
+			$('.btn-draw').hide();
+			$('.btn-draw').closest('.btn-wrapper').hide();
+		});
+		
+		socket.on('broadcast-chat', function(message) {
+			var chatHtml	= '<li class="chat-message"><span class="message server">'+message+'</span></li>';
+			$('.chat-wrapper .chat-messages').append(chatHtml).animate({ scrollTop: $('.chat-wrapper .chat-messages').prop('scrollHeight') }, 1);
 		});
 		
 		socket.on('display-board', function(gameBoard) {
@@ -145,7 +167,7 @@
 							} else {
 								chessPieceTeamType = 'opponent';
 							}
-							$chessPiece = $('<div class="chess-piece '+chessPieceTeamType+'" style="color: '+chessPieceColor+';">'+chessPieceName+'</div>');
+							$chessPiece = $('<div class="chess-piece active '+chessPieceTeamType+'" style="color: '+chessPieceColor+';">'+chessPieceName+'</div>');
 						}
 						$col.append($chessPiece);
 					}

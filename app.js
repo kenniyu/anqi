@@ -47,8 +47,10 @@ var socketsHash	= {},
 		'waitingPlayers': [],
 		'status': 'waiting',
 		'currentPlayers': [],
-		'currentTurnCounter': 1,
-		'drawRequesters': []
+		'currentTurnCounter': 0,
+		'drawRequesters': [],
+		'places': [],
+		'prevWinnerId': -1
 	},
 	NUM_SHUFFLES = 10,
 	NUM_ROWS = 8,
@@ -95,7 +97,6 @@ var socketsHash	= {},
 io.sockets.on('connection', function (socket) {
 	clientsHash[socket['id']] = socket;
 	
-	console.log('socket id = '+socket['id']);
 	socket.set('clientId', socket['id'], function() {
 		socketsHash[socket['id']] = socket['store']['data'];
 	});
@@ -108,6 +109,8 @@ io.sockets.on('connection', function (socket) {
 				// ... and then update the users list for all sockets
 				updateUsersList();	
 			});
+			socket.set('numWins', 0);
+			socket.set('gamesPlayed', 0);
 		});
 	});
 	socket.emit('display-board', gameBoard);
@@ -140,10 +143,9 @@ io.sockets.on('connection', function (socket) {
 			if (numWaitingPlayers == 2 && gameStatus == 'waiting') {
 				// start the game with these two players. move them to currentPlayers
 				for (var i = 0; i < numWaitingPlayers; i++) {
-					readyPlayer = gameState['waitingPlayers'].splice(0, 1)[0];
+					readyPlayer = gameState['waitingPlayers'].shift();
 					gameState['currentPlayers'].push( readyPlayer );
 				}
-				console.log(gameState['currentPlayers']);
 				gameState['status'] = 'playing';
 				// initialize the game board
 				initGameBoard();
@@ -169,7 +171,8 @@ io.sockets.on('connection', function (socket) {
 				drawRequesters.push(socketId);
 				if (drawRequesters.length == 2) {
 					// game declared a draw, end
-					endGame();
+					everyone.emit('hide-btn-draw');
+					endGame( { reason: 'draw', socket: socket });
 				}
 			} else {
 				message = 'You already declared a draw.';
@@ -196,21 +199,112 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	socket.on('disconnect', function () {
-		var gameStatus = gameState['status'];
-		delete socketsHash[socket['id']];
-		if (gameStatus == 'playing') {
-			endGame();
+		var gameStatus = gameState['status'],
+			currentPlayers = gameState['currentPlayers'],
+			socketId = socket['id'],
+			disconnectedPlayerIndex = -1,
+			socketData;
+		
+		for (var i = 0; i < currentPlayers.length; i++) {
+			socketData = currentPlayers[i];
+			if (socketData['clientId'] == socketId) {
+				disconnectedPlayerIndex = i;
+				break;
+			}
+		}
+		
+		
+		if (gameStatus == 'playing' && disconnectedPlayerIndex != -1) {
+			// player who left was playing
+			currentPlayers.splice(disconnectedPlayerIndex, 1);
+			endGame( { reason: 'disconnect', socket: socket } );
 		} else {
 			// was not playing
 		}
+		delete socketsHash[socket['id']];
 		updateUsersList();
 	});
 });
 
-function endGame() {
-	var gameStaus;
+function endGame(reasonHash) {
+	var chatMessage,
+		gameMessage,
+		reason = reasonHash['reason'],
+		socket = reasonHash['socket'],
+		socketId = socket['id'],
+		socketData,
+		playerNickname;
+		
+	gameState['status'] = 'waiting';
 	
-	gameStatus = 'waiting';
+	switch (reason) {
+		case 'disconnect':
+			socketData = socketsHash[socketId];
+			playerNickname = socketData['nickname'];
+			
+			chatMessage = playerNickname + ' has left the game.';
+			broadcastChat(chatMessage);	
+			break;
+		case 'win':
+			socketData = socketsHash[socketId];
+			playerNickname = socketData['nickname'];
+			
+			chatMessage = playerNickname + ' won!';
+			placeWinner(socket);
+			broadcastChat(chatMessage);
+			break;
+		case 'draw':
+			chatMessage = 'The game ended in a draw';
+			broadcastChat(chatMessage);
+			break;
+	}
+	
+	gameMessage = 'Game Over';
+	broadcastGameFeedback(gameMessage);
+	
+	chatMessage = 'The game ended in '+gameState['currentTurnCounter']+' moves.';
+	broadcastChat(chatMessage);
+	
+	setEveryoneWaiting();
+	
+	// reset current turn counter, clear currentPlayers
+	gameState['status'] = 'waiting';
+	gameState['currentTurnCounter'] = 0;
+	gameState['currentPlayers'] = [];
+	gameState['drawRequesters'] = [];
+	
+	// display restart game
+	everyone.emit('show-btn-ready');
+}
+
+function setEveryoneWaiting() {
+	var socketData;
+	for (var socketId in socketsHash) {
+		socketData = socketsHash[socketId];
+		socketData['status'] = 'waiting';
+	}
+}
+
+function placeWinner(socket) {
+	var places = gameState['places'],
+		currentPlayers = gameState['currentPlayers'],
+		socketId = socket['id'],
+		socketData = socketsHash[socketId];
+	
+	places = [];
+	if (currentPlayers[0]['clientId'] == socketId) {
+		places.push(currentPlayers[0]);
+		places.push(currentPlayers[1]);
+	} else {
+		places.push(currentPlayers[1]);
+		places.push(currentPlayers[0]);
+	}
+	gameState['places'] = places;
+	
+	socketData['numWins'] += 1;
+	socket.set('numWins', socketData['numWins']);
+	
+	gameState['prevWinnerId'] = socketId;
 }
 
 function isTurn(socket) {
@@ -223,6 +317,10 @@ function isTurn(socket) {
 	return (socketId == currentPlayerClientId);
 }
 
+function isGamePlaying() {
+	return gameState['status'] == 'playing';
+}
+
 function showPiece(socket, locHash) {
 	var row = locHash['row'],
 		col = locHash['col'],
@@ -231,51 +329,54 @@ function showPiece(socket, locHash) {
 		socketId = socket['id'],
 		currentPlayerTeamEnum,
 		chessPiece;
-		
-	if (isTurn(socket)) {
-		if (gameBoard[row][col]['status'] && gameBoard[row][col]['status'] === 'hidden') {
-			gameBoard[row][col]['status'] = 'active';
-			socketData = socketsHash[socketId];
-			
-			if (socketData['teamEnum'] === undefined) {
-				// set this socket's teamEnum
-				currentPlayerTeamEnum = gameBoard[row][col]['teamEnum'];
-				socketData['teamEnum'] = currentPlayerTeamEnum;
-				socket.set('teamEnum', currentPlayerTeamEnum);
-				socket.emit('set-team-enum', socketData['teamEnum']);
-				
-				// set other socket's teamEnum
-				otherPlayerTeamEnum = (currentPlayerTeamEnum == 0 ? 1 : 0);
-				var currentTurnCounter 		= gameState['currentTurnCounter'],
-					currentPlayers			= gameState['currentPlayers'],
-					otherPlayer				= currentPlayers[(currentTurnCounter+1)%2],
-					otherSocketId			= otherPlayer['clientId'],
-					otherSocket				= getClientById(otherSocketId);
-				socketsHash[otherSocketId]['teamEnum'] = otherPlayerTeamEnum;
-				otherSocket.set('teamEnum', otherPlayerTeamEnum);
-				otherSocket.emit('set-team-enum', otherPlayerTeamEnum);
-				
-				// set all colors of the chessPieces for this socket's enum
-				for (var chessPieceName in chessPieces) {
-					chessPiece = chessPieces[chessPieceName];
-					if (chessPiece['teamEnum'] === socketData['teamEnum']) {
-						chessPiece['color'] = socketData['color'];
-					} else {
-						chessPiece['color'] = socketsHash[otherSocketId]['color'];
+	
+	if (isGamePlaying()) {
+		// game is playing
+		if (isTurn(socket)) {
+			// it is indeed this person's turn
+			if (gameBoard[row][col]['status'] && gameBoard[row][col]['status'] === 'hidden') {
+				gameBoard[row][col]['status'] = 'active';
+				socketData = socketsHash[socketId];
+
+				if (socketData['teamEnum'] === undefined) {
+					// set this socket's teamEnum
+					currentPlayerTeamEnum = gameBoard[row][col]['teamEnum'];
+					socketData['teamEnum'] = currentPlayerTeamEnum;
+					socket.set('teamEnum', currentPlayerTeamEnum);
+					socket.emit('set-team-enum', socketData['teamEnum']);
+
+					// set other socket's teamEnum
+					otherPlayerTeamEnum = (currentPlayerTeamEnum == 0 ? 1 : 0);
+					var currentTurnCounter 		= gameState['currentTurnCounter'],
+						currentPlayers			= gameState['currentPlayers'],
+						otherPlayer				= currentPlayers[(currentTurnCounter+1)%2],
+						otherSocketId			= otherPlayer['clientId'],
+						otherSocket				= getClientById(otherSocketId);
+					socketsHash[otherSocketId]['teamEnum'] = otherPlayerTeamEnum;
+					otherSocket.set('teamEnum', otherPlayerTeamEnum);
+					otherSocket.emit('set-team-enum', otherPlayerTeamEnum);
+
+					// set all colors of the chessPieces for this socket's enum
+					for (var chessPieceName in chessPieces) {
+						chessPiece = chessPieces[chessPieceName];
+						if (chessPiece['teamEnum'] === socketData['teamEnum']) {
+							chessPiece['color'] = socketData['color'];
+						} else {
+							chessPiece['color'] = socketsHash[otherSocketId]['color'];
+						}
 					}
 				}
-				console.log(gameBoard);
+
+				parseAndDisplayBoard();
+				alertNextPlayer();
+			} else {
+				message = 'Bad move. Try again.'
+				broadcastGameFeedback(message, socket);	
 			}
-			
-			parseAndDisplayBoard();
-			alertNextPlayer();
 		} else {
-			message = 'Bad move. Try again.'
-			broadcastGameFeedback(message, socket);	
+			message = 'It is not your move yet!'
+			broadcastGameFeedback(message, socket);
 		}
-	} else {
-		message = 'It is not your move yet!'
-		broadcastGameFeedback(message, socket);
 	}
 }
 
@@ -292,8 +393,6 @@ function canMovePiece(socket, initLocHash, finalLocHash) {
 	
 	// valid init and final locations?
 	if (initRow < 0 || initRow >= NUM_ROWS || initCol < 0 || initCol >= NUM_COLS || finalRow < 0 || finalRow >= NUM_ROWS || finalCol < 0 || finalCol >= NUM_COLS || initLocHash == finalLocHash) {
-		console.log('out of bounds');
-		console.log(initLocHash == finalLocHash);
 		return false;
 	}
 	
@@ -301,7 +400,6 @@ function canMovePiece(socket, initLocHash, finalLocHash) {
 	if ( chessPiece['status'] != 'empty' ) {
 		chessPieceTeamEnum = chessPiece['teamEnum'];
 	}
-	console.log(teamEnum === chessPieceTeamEnum);
 	return (teamEnum === chessPieceTeamEnum);
 }
 
@@ -310,7 +408,8 @@ function movePiece(socket, initLocHash, finalLocHash) {
 		initRow = initLocHash['row'],
 		initCol = initLocHash['col'],
 		finalRow = finalLocHash['row'],
-		finalCol = finalLocHash['col'];
+		finalCol = finalLocHash['col'],
+		winner;
 		
 	if (isTurn(socket)) {
 		if ( canMovePiece(socket, initLocHash, finalLocHash) ) {
@@ -320,7 +419,15 @@ function movePiece(socket, initLocHash, finalLocHash) {
 				gameBoard[finalRow][finalCol] = gameBoard[initRow][initCol];
 				gameBoard[initRow][initCol] = {'status': 'empty'};
 				parseAndDisplayBoard();
-				alertNextPlayer();
+				
+				winner = checkWinner();
+				if (winner) {
+					message = winner['nickname'] + ' won!';
+					broadcastGameFeedback(message);
+					endGame( { reason: 'win', socket: socket } );
+				} else {
+					alertNextPlayer();	
+				}
 			}
 		} else {
 			message = 'You cannot move that piece!'
@@ -330,6 +437,58 @@ function movePiece(socket, initLocHash, finalLocHash) {
 		message = 'It is not your move yet!'
 		broadcastGameFeedback(message, socket);
 	}
+}
+
+function checkWinner() {
+	console.log('checkWinner ===============================================');
+	var teamEnumHash = { 0: 0, 1: 0 },
+		chessPieceInfo;
+		
+	for (var row = 0; row < NUM_ROWS; row++) {
+		for (var col = 0; col < NUM_COLS; col++) {
+			chessPieceInfo = gameBoard[row][col];
+			if (chessPieceInfo['status'] != 'empty') {
+				teamEnumHash[chessPieceInfo['teamEnum']] += 1;
+			}
+		}
+	}
+	
+	console.log(teamEnumHash);
+	
+	if (teamEnumHash[0] == 0) {
+		// winner is team 1
+		return getPlayerByTeamEnum(0);
+	} else if (teamEnumHash[1] == 0) {
+		// winner is team 0
+		return getPlayerByTeamEnum(1);
+	} else {
+		return false;
+	}
+}
+
+function getPlayerByTeamEnum(teamEnum) {
+	var currentPlayers = gameState['currentPlayers'],
+		currentPlayerIds = [],
+		tempPlayerId,
+		tempTeamEnum,
+		socketData;
+		
+	for (var i = 0; i < currentPlayers.length; i++) {
+		currentPlayerIds.push(currentPlayers[i]['clientId']);
+	}
+	
+	for (var i = 0; i < currentPlayerIds.length; i++) {
+		tempPlayerId = currentPlayerIds[i];
+		
+ 		socketData = socketsHash[tempPlayerId];
+		tempTeamEnum = socketData['teamEnum'];
+		
+		if (tempTeamEnum == teamEnum) {
+			return socketData;
+		}
+	}
+	
+	return false;
 }
 
 function checkRules(socket, initLocHash, finalLocHash) {
@@ -361,8 +520,6 @@ function checkRules(socket, initLocHash, finalLocHash) {
 		
 		// are we trying to capture our own piece?
 		finalPieceTeamEnum = finalLocPiece['teamEnum'];
-		console.log(initLocPiece);
-		console.log(finalLocPiece);
 		if (initPieceTeamEnum === finalPieceTeamEnum) {
 			message = 'You cannot capture yourself.';
 			broadcastGameFeedback(message, socket);
@@ -375,7 +532,6 @@ function checkRules(socket, initLocHash, finalLocHash) {
 		if (moveDist == 1) {
 			// everyone except cannons can capture by moving 1 space
 			if (initPieceRank == 6) {
-				console.log('movedist is 1');
 				// we have a cannon. it must capture by moving more than one piece
 				message = "Cannons must jump over only one piece to capture opponent.";
 				broadcastGameFeedback(message, socket);
@@ -402,7 +558,6 @@ function checkRules(socket, initLocHash, finalLocHash) {
 				}
 			}
 		} else if (initPieceRank == 6) {
-			console.log('clicked piece = rank 6');
 			// allow cannons to jump over piece to kill
 			if (finalRow - initRow != 0) {
 				// row jumping
@@ -411,7 +566,6 @@ function checkRules(socket, initLocHash, finalLocHash) {
 						piecesJumpedOver.push(gameBoard[row][finalCol]);	
 					}
 				}
-				console.log(piecesJumpedOver);
 				if (piecesJumpedOver.length == 3) {
 					// success
 					return true;
@@ -437,7 +591,6 @@ function checkRules(socket, initLocHash, finalLocHash) {
 				}
 			}
 		} else {
-			console.log('moveDist = ' + moveDist);
 			message = 'You cannot capture like that';
 			broadcastGameFeedback(message, socket);
 			return false;
@@ -463,13 +616,13 @@ function initGameBoard() {
 	// for all chess pieces, push onto array
 	for (var piece in chessPieces) {
 		chessPieceInfo = chessPieces[piece];
+		chessPieceInfo['status'] = 'hidden';
 		tempPiecesArray.push(chessPieceInfo);
 	}
 	
 	// shuffle pieces
 	shuffledPiecesArray = shufflePieces(tempPiecesArray);
 	
-	console.log(shuffledPiecesArray);
 	
 	// set gameboard
 	gameBoard = [];
@@ -498,7 +651,6 @@ function parseAndDisplayBoard() {
 			}
 		}
 	}
-	console.log(tempGameBoard);
 	everyone.emit('display-board', tempGameBoard);
 }
 
@@ -520,9 +672,10 @@ function shufflePieces(pieces) {
 }
 
 function alertNextPlayer() {
-	// increment the turn counter, find current player
+	// increment the turn counter, check for draw
 	gameState['currentTurnCounter'] += 1;
 	
+	// find and alert the current player
 	var currentTurnCounter 		= gameState['currentTurnCounter'],
 		currentPlayers			= gameState['currentPlayers'],
 		currentPlayer			= currentPlayers[currentTurnCounter%2],
@@ -532,8 +685,12 @@ function alertNextPlayer() {
 		everyoneMsg				= "It is "+currentPlayerName+"'s turn.",
 		currentPlayerMsg		= "It is your turn.";
 	
-	console.log(currentPlayer);
-	console.log(currentPlayerName);
+	if (currentTurnCounter == 2) {
+		for (var i = 0; i < currentPlayers.length; i++) {
+			currentPlayerClientId = currentPlayers[i]['clientId'];
+			clientsHash[currentPlayerClientId].emit('show-btn-draw');
+		}
+	}
 	
 	broadcastGameFeedback(everyoneMsg);
 	broadcastGameFeedback(currentPlayerMsg, currentPlayer);
@@ -562,6 +719,10 @@ function setNickname(socket, name) {
 		everyone.emit('update-users-list', socketsHash);
 		submitChat(socket, prevNickname + ' is now known as ' +data['nickname'], 'change-nickname');
 	});
+}
+
+function broadcastChat(message) {
+	everyone.emit('broadcast-chat', message);
 }
 
 function submitChat(socket, message, messageType) {
