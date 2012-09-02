@@ -1,6 +1,6 @@
 body {
 	font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
-	background: #fff url('/images/norwegian_rose.png');
+	background: #fff url('/images/triangles_pattern.png');
 }
 
 a {
@@ -60,13 +60,125 @@ a {
 	-moz-box-shadow: 0 1px 0 #fff;
 	box-shadow: 0 1px 0 #fff;
 	position: relative;
-	padding: 60px 150px;
+	padding: 60px 0;
+}
+
+.game-board .game-board-container {
+	position: absolute;
+	top: 60px;
+	left: 150px;
+	z-index: 100;
+}
+
+.game-board .casualties {
+/*	-webkit-box-shadow: inset 1px 2px 5px #aaa;
+	-moz-box-shadow: inset 1px 2px 5px #aaa;
+	box-shadow: inset 1px 2px 5px #aaa;
+	
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	-webkit-border-radius: 4px;*/
+	
+	height: 580px;
+	width: 130px;
+	top: 10px;
+	
+	position: absolute;
+}
+
+.game-board .casualties .casualties-label {
+	padding: 30px 0;
+	text-align: center;
+	line-height: 52.5px;
+	color: #eee;
+	text-shadow: 0 -1px 2px #666;
+	position: absolute;
+	left: 54px;
+}
+
+.game-board .casualties .casualty-container {
+	position: absolute;
+	width: 60px;
+	height: 60px;
+	text-align: center;
+	
+	-webkit-box-shadow: inset 1px 2px 5px #ccc;
+	-moz-box-shadow: inset 1px 2px 5px #ccc;
+	box-shadow: inset 1px 2px 5px #ccc;
+	
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	-webkit-border-radius: 4px;
+	
+	background-color: rgba(255, 255, 255, 0.6);
+}
+
+.game-board .casualties .casualty-container.middle {
+	left: 35px;
+}
+
+.game-board .casualties .casualty-container.left {
+	left: 0px;
+}
+
+.game-board .casualties .casualty-container.right {
+	right: 0px;
+}
+
+
+.game-board .casualties .casualty-container.general {
+	top: 0px;
+}
+
+.game-board .casualties .casualty-container.advisor {
+	top: 65px;
+}
+
+.game-board .casualties .casualty-container.elephant {
+	top: 130px;
+}
+
+.game-board .casualties .casualty-container.chariot {
+	top: 195px;
+}
+
+.game-board .casualties .casualty-container.horse {
+	top: 260px;
+}
+
+.game-board .casualties .casualty-container.cannon {
+	top: 325px;
+}
+
+.game-board .casualties .casualty-container.soldier.top-pair {
+	top: 390px;
+}
+
+.game-board .casualties .casualty-container.soldier.mid-pair {
+	top: 455px;
+}
+
+.game-board .casualties .casualty-container.soldier.last {
+	top: 520px;
+}
+
+.game-board .casualties.left {
+	left: 10px;
+}
+
+.game-board .casualties.right {
+	right: 10px;
+}
+
+.game-board .casualties .casualties-label-letter {
+	font-size: 30px;
 }
 
 .game-board svg {
-	padding: 0;
-	margin: 0;
 	position: absolute;
+	z-index: 10;
+	top: 60px;
+	left: 150px;
 }
 
 .game-board .row {
@@ -80,12 +192,15 @@ a {
 	text-align: center;
 	position: relative;
 	float: left;
-	cursor: pointer;
+	
+	-webkit-box-shadow: inset 0 0 2px #333;
+	-moz-box-shadow: inset 0 0 2px #333;
+	box-shadow: inset 0 0 2px #333;
 }
 
 .game-controls {
 	height: 40px;
-	padding: 10px 30px;
+	padding: 10px;
 }
 
 .game-controls .btn-wrapper {
@@ -126,7 +241,6 @@ a {
 .sidebar .users-wrapper {
 	color: #333;
 	text-shadow: 0 1px 0 #fff;
-	padding: 7px 10px;
 	
 	border-bottom: 1px solid #ccc;
 	
@@ -137,11 +251,12 @@ a {
 
 .sidebar .users-wrapper h2 {
 	text-align: center;
-	border-bottom: 1px solid #ccc;
-	-webkit-box-shadow: 0 1px 0 #fff;
-	-moz-box-shadow: 0 1px 0 #fff;
-	box-shadow: 0 1px 0 #fff;
-	padding-bottom: 7px;
+	cursor: pointer;
+	padding: 7px 10px;
+}
+
+.sidebar .users-wrapper h2:hover {
+	background-color: rgba(255, 255, 255, 0.8);
 }
 
 .sidebar .users-wrapper .users-list {
@@ -149,6 +264,15 @@ a {
 	font-size: 13px;
 	overflow: auto;
 	height: 200px;
+	
+	padding: 5px 10px;
+	
+	border-top: 1px solid #ccc;
+	-webkit-box-shadow: inset 0 1px 0 #fff;
+	-moz-box-shadow: inset 0 1px 0 #fff;
+	box-shadow: inset 0 1px 0 #fff;
+	
+	padding-bottom: 7px;
 }
 
 .sidebar .users-wrapper .users-list .user-item {
@@ -188,6 +312,70 @@ a {
 }
 
 
+.sidebar .rules-wrapper {
+	color: #333;
+	text-shadow: 0 1px 0 #fff;
+/*	padding: 7px 10px;*/
+	
+	border-bottom: 1px solid #ccc;
+	
+	-webkit-box-shadow: 0 1px 0 #fff;
+	-moz-box-shadow: 0 1px 0 #fff;
+	box-shadow: 0 1px 0 #fff;
+}
+
+.sidebar .rules-wrapper h2 {
+	text-align: center;
+	cursor: pointer;
+	padding: 7px 10px;
+	
+/*	border-bottom: 1px solid #ccc;
+	-webkit-box-shadow: 0 1px 0 #fff;
+	-moz-box-shadow: 0 1px 0 #fff;
+	box-shadow: 0 1px 0 #fff;
+	padding-bottom: 7px;*/
+}
+
+.sidebar .rules-wrapper h2:hover {
+	background-color: rgba(255, 255, 255, 0.8);
+	
+/*	border-bottom: 1px solid #ccc;
+	-webkit-box-shadow: 0 1px 0 #fff;
+	-moz-box-shadow: 0 1px 0 #fff;
+	box-shadow: 0 1px 0 #fff;
+	padding-bottom: 7px;*/
+}
+
+.sidebar .rules-wrapper .rules-container {
+	display: none;
+	font-size: 13px;
+	overflow: auto;
+	height: 202px;
+	
+	border-top: 1px solid #ccc;
+	-webkit-box-shadow: inset 0 1px 0 #fff;
+	-moz-box-shadow: inset 0 1px 0 #fff;
+	box-shadow: inset 0 1px 0 #fff;
+	
+	padding: 5px 10px;
+}
+
+.sidebar .rules-wrapper .rules-container p {
+	padding: 8px 0;
+}
+
+.sidebar .rules-wrapper .rules-container .piece-character {
+	font-weight: bold;
+	font-size: 15px;
+}
+
+.sidebar .rules-wrapper .rules-container .piece-character.red {
+	color: #f00;
+}
+
+.sidebar .rules-wrapper .rules-container .piece-character.black {
+	color: #000;
+}
 
 .sidebar .chat-wrapper {
 	color: #333;
@@ -197,7 +385,7 @@ a {
 	-webkit-box-shadow: 0 1px 0 #fff;
 	-moz-box-shadow: 0 1px 0 #fff;
 	box-shadow: 0 1px 0 #fff;
-	padding: 7px 10px;
+	padding: 7px 0;
 }
 
 .sidebar .chat-wrapper h2 {
@@ -210,14 +398,18 @@ a {
 }
 
 .sidebar .chat-wrapper .chat-messages {
-	padding-top: 5px;
 	font-size: 13px;
 	overflow: auto;
-	height: 300px;
+	height: 263px;
 }
 
 .sidebar .chat-wrapper .chat-messages .chat-message {
-	padding: 3px 5px;
+	padding: 4px 8px;
+}
+
+.sidebar .chat-wrapper .chat-messages .chat-message .message.server {
+	font-style: italic;
+	color: #999;
 }
 
 .sidebar .chat-wrapper .chat-messages .chat-message:nth-child(even) {
@@ -255,6 +447,7 @@ a {
 	font-size: 30px;
 	font-weight: bold;
 	line-height: 50px;
+	text-decoration: none;
 	
 	-moz-border-radius: 25px;
 	border-radius: 25px;
@@ -280,14 +473,12 @@ a {
 }
 
 .chess-piece:hover {
-	cursor: pointer;
 	-webkit-box-shadow: 0 3px 5px rgba(0, 0, 0, 0.8);
 	-moz-box-shadow: 0 3px 5px rgba(0, 0, 0, 0.8);
 	box-shadow: 0 3px 5px rgba(0, 0, 0, 0.8);	
 }
 
 .chess-piece.player:hover {
-	cursor: pointer;
 	-webkit-box-shadow: 0 3px 5px rgba(0, 200, 0, 0.3);
 	-moz-box-shadow: 0 3px 5px rgba(0, 200, 0, 0.3);
 	box-shadow: 0 3px 5px rgba(0, 200, 0, 0.3);	
@@ -306,7 +497,7 @@ a {
 }
 
 .chess-piece.active {
-	background: #000 url('/images/egg_shell.png');
+	background: #fff url('/images/vintage_speckles.png');
 }
 
 .btn {
@@ -361,3 +552,4 @@ a {
 .btn.btn-draw {
 	display: none;
 }
+

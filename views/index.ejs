@@ -12,7 +12,8 @@
 	<script src="/socket.io/socket.io.js"></script>
 	
 	<script type="text/javascript">
-		var socket 		= io.connect('http://localhost'),
+		var currentUrl = document.URL;
+		var socket 		= io.connect(currentUrl),
 			NUM_ROWS 	= 8,
 			NUM_COLS	= 4,
 			TEAM_ENUM	= -1,
@@ -84,7 +85,7 @@
 		
 		socket.on('display-game-feedback', function(feedbackHash) {
 			var feedbackMessage = feedbackHash['message'];
-			$('.feedback-wrapper .feedback').text(feedbackMessage);
+			$('.feedback-wrapper .feedback').html(feedbackMessage);
 		});
 		
 		socket.on('update-board', function(gameBoard, perspective) {
@@ -132,9 +133,9 @@
 			}
 			
 			var $gameBoard = $('.content-main .game-board'),
+				$gameBoardContainer = $('.content-main .game-board .game-board-container'),
 				$row,
 				$col,
-				$svg = $gameBoard.find('svg'),
 				chessPieceName,
 				chessPieceInfo,
 				chessPieceColor,
@@ -143,21 +144,20 @@
 				$chessPiece,
 				status;
 			
-			$svg.detach()
 			
-			$gameBoard.empty().append($svg);
-				
+			$gameBoardContainer.empty();
+			
+			
 			for (var row = 0; row < NUM_ROWS; row++) {
 				$row = $('<div class="row"></div>');
 				for (var col = 0; col < NUM_COLS; col++) {
 					chessPieceInfo = gameBoard[row][col];
 					chessPieceInfoStatus = chessPieceInfo['status'];
-					console.log(chessPieceInfo);
 					$col = $('<div class="col" data-cell-id="'+row+','+col+'"></div>');
 					if (chessPieceInfoStatus != 'empty') {
 						// there is a piece here
 						if (chessPieceInfoStatus == 'hidden') {
-							$chessPiece = $('<div class="chess-piece"></div>');
+							$chessPiece = $('<a href="#" class="chess-piece"></a>');
 						} else {
 							chessPieceName = chessPieces[chessPieceInfo['id']]['character'];
 							chessPieceColor = chessPieceInfo['color'];
@@ -167,15 +167,34 @@
 							} else {
 								chessPieceTeamType = 'opponent';
 							}
-							$chessPiece = $('<div class="chess-piece active '+chessPieceTeamType+'" style="color: '+chessPieceColor+';">'+chessPieceName+'</div>');
+							$chessPiece = $('<a href="#" class="chess-piece active '+chessPieceTeamType+'" style="color: '+chessPieceColor+';">'+chessPieceName+'</a>');
 						}
 						$col.append($chessPiece);
 					}
 					$row.append($col);
 				}
-				$gameBoard.append($row);
+				$gameBoardContainer.append($row);
 			}
 			
+		});
+		
+		socket.on('chess-piece-casualty', function(killedChessPiece) {
+			console.log(killedChessPiece);
+			var chessPieceName = killedChessPiece['name'],
+				chessPieceCharacter = chessPieces[killedChessPiece['id']]['character'],
+				chessPieceTeamEnum = killedChessPiece['teamEnum'],
+				chessPieceColor = killedChessPiece['color'],
+				$matchedCasualtyContainers = $('.casualties[data-team-enum="'+chessPieceTeamEnum+'"]').find('.'+chessPieceName),
+				$matchedCasualtyContainer,
+				$chessPiece;
+			
+			$.each($matchedCasualtyContainers, function(index, container) {
+				if ($(container).children().length == 0) {
+					$chessPiece = $('<a href="#" class="chess-piece active" style="color: '+chessPieceColor+';">'+chessPieceCharacter+'</a>');
+					$(container).append($chessPiece);
+					return false;
+				}
+			});
 		});
 		
 		function generateUserItemHtml(socketId, socketData) {
@@ -254,6 +273,38 @@
 				e.preventDefault();
 			});
 			
+			$('.rules-wrapper').live('click', function(e) {
+				var $rulesContainer = $(this).find('.rules-container'),
+					$usersList = $('.users-wrapper .users-list'),
+					$target = $(e.target);
+					
+				if ($target[0].nodeName == 'H2') {
+					if ( $rulesContainer.is(':visible') ) {
+						$rulesContainer.slideUp();
+						$usersList.slideDown();
+					} else {
+						$rulesContainer.slideDown();
+						$usersList.slideUp();
+					}
+				}
+			});
+			
+			$('.users-wrapper').live('click', function(e) {
+				var $usersList = $(this).find('.users-list');
+					$rulesContainer = $('.rules-wrapper').find('.rules-container'),
+					$target = $(e.target);
+					
+				if ($target[0].nodeName == 'H2') {
+					if ( $usersList.is(':visible') ) {
+						$usersList.slideUp();
+						$rulesContainer.slideDown();
+					} else {
+						$usersList.slideDown();
+						$rulesContainer.slideUp();
+					}
+				}
+			});
+			
 			$('.col').live('click', function(e) {
 				var cellInfo 	= $(this).attr('data-cell-id'),
 					cellRow		= cellInfo.split(',')[0],
@@ -302,6 +353,12 @@
 					}
 				}
 				
+				e.preventDefault();
+				
+			});
+			
+			$('.chess-piece').live('click', function(e) {
+				e.preventDefault();
 			});
 			
 			drawBoardBackground();
@@ -316,8 +373,68 @@
 	<div class="wrapper">
 		<div class="content-main">
 			<div class="game-board">
+				<div class="casualties left" data-team-enum="0">
+					<ul class="casualties-label">
+						<li class="casualties-label-letter">C</li>
+						<li class="casualties-label-letter">A</li>
+						<li class="casualties-label-letter">S</li>
+						<li class="casualties-label-letter">U</li>
+						<li class="casualties-label-letter">A</li>
+						<li class="casualties-label-letter">L</li>
+						<li class="casualties-label-letter">T</li>
+						<li class="casualties-label-letter">I</li>
+						<li class="casualties-label-letter">E</li>
+						<li class="casualties-label-letter">S</li>
+					</ul>
+					<div class="casualty-container general middle"></div>
+					<div class="casualty-container advisor left"></div>
+					<div class="casualty-container advisor right"></div>
+					<div class="casualty-container elephant left"></div>
+					<div class="casualty-container elephant right"></div>
+					<div class="casualty-container chariot left"></div>
+					<div class="casualty-container chariot right"></div>
+					<div class="casualty-container horse left"></div>
+					<div class="casualty-container horse right"></div>
+					<div class="casualty-container cannon left"></div>
+					<div class="casualty-container cannon right"></div>
+					<div class="casualty-container soldier left top-pair"></div>
+					<div class="casualty-container soldier right top-pair"></div>
+					<div class="casualty-container soldier left mid-pair"></div>
+					<div class="casualty-container soldier right mid-pair"></div>
+					<div class="casualty-container soldier middle last"></div>
+				</div>
 				
-				
+				<div class="casualties right" data-team-enum="1">
+					<ul class="casualties-label">
+						<li class="casualties-label-letter">C</li>
+						<li class="casualties-label-letter">A</li>
+						<li class="casualties-label-letter">S</li>
+						<li class="casualties-label-letter">U</li>
+						<li class="casualties-label-letter">A</li>
+						<li class="casualties-label-letter">L</li>
+						<li class="casualties-label-letter">T</li>
+						<li class="casualties-label-letter">I</li>
+						<li class="casualties-label-letter">E</li>
+						<li class="casualties-label-letter">S</li>
+					</ul>
+					<div class="casualty-container general middle"></div>
+					<div class="casualty-container advisor left"></div>
+					<div class="casualty-container advisor right"></div>
+					<div class="casualty-container elephant left"></div>
+					<div class="casualty-container elephant right"></div>
+					<div class="casualty-container chariot left"></div>
+					<div class="casualty-container chariot right"></div>
+					<div class="casualty-container horse left"></div>
+					<div class="casualty-container horse right"></div>
+					<div class="casualty-container cannon left"></div>
+					<div class="casualty-container cannon right"></div>
+					<div class="casualty-container soldier left top-pair"></div>
+					<div class="casualty-container soldier right top-pair"></div>
+					<div class="casualty-container soldier left mid-pair"></div>
+					<div class="casualty-container soldier right mid-pair"></div>
+					<div class="casualty-container soldier middle last"></div>
+				</div>
+				<div class="game-board-container"></div>
 			</div>
 		
 			<div class="game-controls">
@@ -333,11 +450,30 @@
 		
 		<div class="sidebar">
 			<div class="users-wrapper">
-				<h2>ching chong ling long</h2>
+				<h2>ching chong</h2>
 				<ul class="users-list">
 				</ul>
 			</div>
-				
+			
+			<div class="rules-wrapper">
+				<h2>ling long</h2>
+				<div class="rules-container">
+					<p>The goal of the game is to try to kill off all of your opponents pieces.</p>
+					<p>The game begins by the first player flipping over, or revealing, a piece.  From here on, the teams are set - the color of the piece flipped over is the color of the team assigned to that player.  The other player is the other color (subsequent flips do not change teams, regardless of whether or not you flip your own piece or another players piece).</p>
+					<p>To capture, you can only move adjacently by 1 space.  Furthermore, you must be of equal or higher rank than the piece you're trying to capture.  The ranking is as follows:</p>
+					<ul class="rank-list">
+						<li class="team-one-ranks">
+							<span class="piece-character red">帥</span> > <span class="piece-character red">仕</span> > <span class="piece-character red">相</span> > <span class="piece-character red">俥</span> > <span class="piece-character red">傌</span> > <span class="piece-character red">炮</span> > <span class="piece-character red">兵</span>
+						</li>
+						<li class="team-two-ranks">
+							<span class="piece-character black">將</span> > <span class="piece-character black">士</span> > <span class="piece-character black">象</span> > <span class="piece-character black">車</span> > <span class="piece-character black">馬</span> > <span class="piece-character black">砲</span> > <span class="piece-character black">卒</span>
+						</li>
+					</ul>
+					<p>So <span class="piece-character black">士</span> can capture <span class="piece-character red">仕</span>, <span class="piece-character red">相</span>, <span class="piece-character red">俥</span>, etc...  The only exception to this rule is that soldiers <span class="piece-character red">兵</span> and <span class="piece-character black">卒</span> can capture generals <span class="piece-character black">將</span> and <span class="piece-character red">帥</span>, respectively. Of course, this means that generals cannot capture soldiers.</p>
+					<p>One special piece listed in the ranks is the cannons <span class="piece-character red">炮</span> and <span class="piece-character black">砲</span>.  These pieces can capture ANY opponent, regardless of the opponents rank.  However, it must capture by hopping over only one friendly/opponent piece.  The number of spaces between the initial location and final capture location of the piece does not matter, only that it must hop over just one piece.</p>
+					<p>The game is over when you kill off all of your opponents' pieces, your opponent leaves, or you both declare a draw.</p>
+				</div>
+			</div>
 			<div class="chat-wrapper">
 				<h2>ting tong</h2>
 				<ul class="chat-messages">
@@ -354,6 +490,8 @@
 	
 	</div>
 	
+	<div class="rules">
+	</div>
 </body>
 
 </html>
